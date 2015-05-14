@@ -5,7 +5,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from neutron.extensions import portbindings
-from neutron.plugins.ml2.common.exceptions import MechanismDriverError 
+from neutron.plugins.ml2.common.exceptions import MechanismDriverError
 from neutron.plugins.ml2.driver_api import MechanismDriver
 
 from altocumulus.ml2 import config
