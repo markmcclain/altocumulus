@@ -1,3 +1,4 @@
+# Copyright 2015 Cumulus Networks, Inc
 # Copyright 2012 Cisco Systems, Inc.
 # All Rights Reserved.
 #
@@ -21,7 +22,8 @@
 import os
 from subprocess import CalledProcessError
 
-BRIDGE_NAME_PREFIX = 'brq'
+BRIDGE_NAME_PREFIX = 'br'
+VXLAN_NAME_PREFIX = 'vxlan'
 
 BRIDGE_INTERFACES_FS = '/sys/devices/virtual/net/{}/brif/'
 SUBINTERFACE_NAME = '{}.{}'
@@ -33,61 +35,95 @@ class LinuxBridgeManager(object):
     def __init__(self, shell):
         self.shell = shell
 
-    def device_exists(self, device):
+    def _device_exists(self, device):
         try:
             self.shell.call(['ip', 'link', 'show', 'dev', device])
         except CalledProcessError:
             return False
         return True
 
-    def interface_exists_on_bridge(self, bridge, interface):
+    def _interface_exists_on_bridge(self, bridge, interface):
         directory = BRIDGE_INTERFACES_FS.format(bridge)
         for filename in os.listdir(directory):
             if filename == interface:
                 return True
         return False
-    
+
+    def _up_interface(self, interface):
+        self.shell.call(['ip', 'link', 'set', interface, 'up'])
+
+    def _down_interface(self, interface):
+        self.shell.call(['ip', 'link', 'set', interface, 'down'])
+
+    def _delete_interface(self, interface):
+        if not self._device_exists(interface):
+            return
+
+        self._down_interface(interface)
+        self.shell.call(['ip', 'link', 'delete', interface])
+
+
+    def set_vxlan_opts(self, local_bind_ip, service_node_ip):
+        #XXX Make DNS names work for these.
+        self._local_bind_ip = local_bind_ip
+        self._service_node_ip = service_node_ip
+
     def get_bridge_name(self, network_id):
-        bridge_name = BRIDGE_NAME_PREFIX + network_id[0:11]
+        bridge_name = BRIDGE_NAME_PREFIX + network_id[0:12]
         return bridge_name
 
     def get_subinterface_name(self, physical_interface, vlan_id):
         return SUBINTERFACE_NAME.format(physical_interface, vlan_id)
 
+    def get_vxlan_name(self, vni):
+        return VXLAN_NAME_PREFIX + str(vni)
+
     def ensure_vlan(self, physical_interface, vlan_id):
         interface = self.get_subinterface_name(physical_interface, vlan_id)
 
-        if not self.device_exists(interface):
-            self.shell.call(['ip', 'link', 'add', 'link', physical_interface, 'name', interface, 'type', 'vlan', 'id', vlan_id])
-            self.shell.call(['ip', 'link', 'set', interface, 'up'])
+        if not self._device_exists(interface):
+            self.shell.call(['ip', 'link', 'add', 'link', physical_interface,
+                             'name', interface, 'type', 'vlan', 'id', vlan_id])
+            self._up_interface(interface)
 
         return interface
 
     def delete_vlan(self, physical_interface, vlan_id):
         interface = self.get_subinterface_name(physical_interface, vlan_id)
-        if not self.device_exists(interface):
-            return
+        self._delete_interface(interface)
 
-        self.shell.call(['ip', 'link', 'set', interface, 'down'])
-        self.shell.call(['ip', 'link', 'delete', interface])
+    def ensure_vxlan(self, vni):
+        interface = self.get_vxlan_name(vni)
+
+        if not self._device_exists(interface):
+            self.shell.call(['ip', 'link', 'add', interface, 'type', 'vxlan',
+                             'id', vni, 'local', self._local_bind_ip,
+                             'svcnode', self._service_node_ip])
+            self._up_interface(interface)
+
+        return interface
+
+    def delete_vxlan(self, vni):
+        interface = self.get_vxlan_name(vni)
+        self._delete_interface(interface)
 
     def add_interface(self, bridge_name, interface_name):
-        if self.interface_exists_on_bridge(bridge_name, interface_name):
+        if self._interface_exists_on_bridge(bridge_name, interface_name):
             return
 
         self.shell.call(['brctl', 'addif', bridge_name, interface_name])
 
     def ensure_bridge(self, bridge_name):
-        if self.device_exists(bridge_name):
+        if self._device_exists(bridge_name):
             return
 
         self.shell.call(['brctl', 'addbr', bridge_name])
         self.shell.call(['brctl', 'stp', bridge_name, 'off'])
-        self.shell.call(['ip', 'link', 'set', bridge_name, 'up'])
+        self._up_interface(bridge_name)
 
     def remove_bridge(self, bridge_name):
-        if not self.device_exists(bridge_name):
+        if not self._device_exists(bridge_name):
             return
 
-        self.shell.call(['ip', 'link', 'set', bridge_name, 'down'])
+        self._down_interface(bridge_name)
         self.shell.call(['brctl', 'delbr', bridge_name])

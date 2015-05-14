@@ -1,3 +1,5 @@
+# Copyright 2015 Cumulus Networks, Inc
+
 from argparse import ArgumentParser
 
 from flask import Flask, Response, request
@@ -34,7 +36,7 @@ def update_network(network_id):
     networks[network_id] = str(params['vlan'])
 
     bridge_name = lbm.get_bridge_name(network_id)
-    lbm.ensure_bridge(bridge_name) 
+    lbm.ensure_bridge(bridge_name)
 
     return empty_response()
 
@@ -69,17 +71,37 @@ def unplug_host_from_network(network_id, host):
 
     return empty_response()
 
+@app.route('/networks/<network_id>/vxlan/<vni>', methods=['PUT'])
+def plug_vxlan_into_network(network_id, vni):
+    bridge_name = lbm.get_bridge_name(network_id)
+    interface_name = lbm.ensure_vxlan(vni)
+
+    lbm.add_interface(bridge_name, interface_name)
+
+    return empty_response()
+
+@app.route('/networks/<network_id>/vxlan/<vni>', methods=['DELETE'])
+def unplug_vxlan_from_network(network_id, vni):
+    vlan_id = networks[network_id]
+
+    lbm.delete_vxlan(physical_interface, vlan_id)
+
+    return empty_response()
+
 def main():
     parser = ArgumentParser()
-    parser.add_argument('-c', '--config-file', default='config.yml')
+    parser.add_argument('-c', '--config-file', default='config.yaml')
     parser.add_argument('-d', '--debug', action='store_true')
-    
+
     args = parser.parse_args()
 
     config = utils.load_config(args.config_file)
 
-    bind = config.get('bind', DEFAULT_API_BIND) 
+    bind = config.get('bind', DEFAULT_API_BIND)
     port = config.get('port', DEFAULT_API_PORT)
+
+    lbm.set_vxlan_opts(config.get('local_bind', ''),
+                       config.get('service_node', ''))
 
     app.debug = config.get('debug', False)
     app.run(host=bind, port=port)
