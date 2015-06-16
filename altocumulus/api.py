@@ -48,7 +48,7 @@ def delete_network(network_id):
 
         del networks[network_id]
 
-    return empty_repsonse()
+    return empty_response()
 
 @app.route('/networks/<network_id>/hosts/<host>', methods=['PUT'])
 def plug_host_into_network(network_id, host):
