@@ -22,7 +22,7 @@ There are two components involved in this project:
 1. Install the driver and its dependencies with the following
 
     ```bash
-    pip install git+git://github.com/ianunruh/altocumulus.git
+    pip install git+git://github.com/CumulusNetworks/altocumulus.git
     pip install requests
     ```
 
@@ -34,7 +34,7 @@ There are two components involved in this project:
 1. Install the API server
 
     ```bash
-    pip install git+git://github.com/ianunruh/altocumulus.git
+    pip install git+git://github.com/CumulusNetworks/altocumulus.git
     ```
 
 2. Place the included Upstart script in `/etc/init` and run `start altocumulus-api`
