@@ -18,6 +18,7 @@ networks = {
 }
 physical_interfaces = {
 }
+trunks = []
 
 shell = Shell(DEFAULT_ROOT_HELPER)
 
@@ -33,10 +34,14 @@ def empty_response(status=200):
 def update_network(network_id):
     params = request.get_json(force=True)
 
-    networks[network_id] = str(params['vlan'])
+    networks[network_id] = vlan_id = str(params['vlan'])
 
     bridge_name = lbm.get_bridge_name(network_id)
     lbm.ensure_bridge(bridge_name)
+
+    for trunk in trunks:
+        trunk_subinterface_name = lbm.ensure_vlan(trunk, vlan_id)
+        lbm.add_interface(bridge_name, trunk_subinterface_name)
 
     return empty_response()
 
@@ -44,6 +49,11 @@ def update_network(network_id):
 def delete_network(network_id):
     if network_id in networks:
         bridge_name = lbm.get_bridge_name(network_id)
+        vlan_id = networks[network_id]
+
+        for trunk in trunks:
+            lbm.delete_vlan(trunk, vlan_id)
+
         lbm.remove_bridge(bridge_name)
 
         del networks[network_id]
@@ -99,6 +109,8 @@ def main():
 
     bind = config.get('bind', DEFAULT_API_BIND)
     port = config.get('port', DEFAULT_API_PORT)
+
+    trunks.extend(filter(len, config.get('trunk_interfaces', '').split(',')))
 
     lbm.set_vxlan_opts(config.get('local_bind', ''),
                        config.get('service_node', ''))
