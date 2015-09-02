@@ -27,15 +27,7 @@ switche names or IPs must be separated using comma.
 switches="192.168.10.10,192.168.20.20"
 """
 
-CONFIG = [
-    cfg.StrOpt('protocol_port', default='8140',
-               help=_('port to send API request to cumulus switch')),
-    cfg.ListOpt('switches', default=[],
-                help=_('list of switch name/ip and remote switch port connected to this compute node'))
 
-]
-
-cfg.CONF.register_opts(CONFIG, "ml2_cumulus")
 
 class CumulusMechanismDriver(MechanismDriver):
     """
