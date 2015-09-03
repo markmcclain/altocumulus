@@ -107,17 +107,23 @@ class CumulusMechanismDriver(MechanismDriver):
         self._remove_from_switch(context)
 
     def _add_to_switch(self, context):
+        if not hasattr(context, 'current'):
+            return
         port = context.current
-
         device_id = port['device_id']
         device_owner = port['device_owner']
         host = port[portbindings.HOST_ID]
         network_id = port['network_id']
+        if not hasattr(context, 'top_bound_segment'):
+            return
+        if not context.top_bound_segment:
+            return
         vni = context.top_bound_segment['segmentation_id']
         vlan = context.bottom_bound_segment['segmentation_id']
 
         if not (host and device_id and device_owner):
             return
+
 
         for _switch_ip in self.switches:
             r = requests.put(
@@ -141,14 +147,18 @@ class CumulusMechanismDriver(MechanismDriver):
                     network=network_id,
                     host=host
                 ),
-                VXLAN_URL.format(
-                    scheme=self.scheme,
-                    base=_switch_ip,
-                    port=self.protocol_port,
-                    network=network_id,
-                    vni=vni
-                )
             ]
+            if context.top_bound_segment != context.bottom_bound_segment:
+                actions.append(
+                    VXLAN_URL.format(
+                        scheme=self.scheme,
+                        base=_switch_ip,
+                        port=self.protocol_port,
+                        network=network_id,
+                        vni=vni
+                    )
+                )
+
 
             for action in actions:
                 r = requests.put(action)
@@ -157,6 +167,8 @@ class CumulusMechanismDriver(MechanismDriver):
                     raise MechanismDriverError()
 
     def _remove_from_switch(self, context):
+        if not hasattr(context, 'current'):
+            return
         port = context.current
         host = port[portbindings.HOST_ID]
         network_id = port['network_id']
