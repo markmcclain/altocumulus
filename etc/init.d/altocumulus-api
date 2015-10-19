@@ -15,7 +15,7 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-DAEMON=/usr/bin/altocumulus-api
+DAEMON=/usr/local/bin/altocumulus-api
 DAEMON_NAME=altocumulus-api
 DESC="Cumulus ML2 Plugin HTTP API server"
 
