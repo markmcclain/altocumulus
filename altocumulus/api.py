@@ -119,6 +119,8 @@ def main():
 
     trunks.extend(filter(len, config.get('trunk_interfaces', '').split(',')))
 
+    dm.exclude_interfaces = config.get('exclude_interfaces', ())
+
     lbm.set_vxlan_opts(config.get('local_bind', ''),
                        config.get('service_node', ''))
 

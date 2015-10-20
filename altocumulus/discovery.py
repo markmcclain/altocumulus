@@ -2,13 +2,16 @@ class DiscoveryError(RuntimeError):
     pass
 
 class DiscoveryManager(object):
-    def __init__(self, shell):
+    def __init__(self, shell, exclude_interfaces=()):
         self.shell = shell
+        self.exclude_interfaces = exclude_interfaces
 
     def find_interface(self, hostname):
         neighbors = self.fetch_neighbors()
 
         for interface, details in neighbors.iteritems():
+            if interface in self.exclude_interfaces:
+                continue
             if details['chassis']['name'] == hostname:
                 return interface
         # This causes a problem where neutron asks for serverX port
