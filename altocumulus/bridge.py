@@ -96,9 +96,11 @@ class LinuxBridgeManager(object):
         interface = self.get_vxlan_name(vni)
 
         if not self._device_exists(interface):
-            self.shell.call(['ip', 'link', 'add', interface, 'type', 'vxlan',
-                             'id', vni, 'local', self._local_bind_ip,
-                             'svcnode', self._service_node_ip])
+            argv = ['ip', 'link', 'add', interface, 'type', 'vxlan',
+                    'id', vni, 'local', self._local_bind_ip]
+            if self._service_node_ip:
+                argv.extend(['svcnode', self._service_node_ip])
+            self.shell.call(argv)
             self._up_interface(interface)
 
         return interface
