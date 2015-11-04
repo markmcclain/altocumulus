@@ -167,6 +167,8 @@ class CumulusMechanismDriver(MechanismDriver):
                     raise MechanismDriverError()
 
     def _remove_from_switch(self, context):
+        return  # FIXME: Right now leave the vlan allocation in place
+                # other than excess config no current harm
         if not hasattr(context, 'current'):
             return
         port = context.current
